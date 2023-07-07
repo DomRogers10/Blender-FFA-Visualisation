@@ -1,0 +1,96 @@
+import bpy
+import math
+
+r0 = 5
+r1 = 10
+phi0 = 30
+phi1 = 60
+phi0 = math.radians(phi0)
+phi1 = math.radians(phi1)
+h = 4
+gapx = 3
+gapy = 0.5
+
+def print(data):
+    for window in bpy.context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'CONSOLE':
+                override = {'window': window, 'screen': screen, 'area': area}
+                bpy.ops.console.scrollback_append(override, text=str(data), type="OUTPUT")
+
+bpy.ops.object.select_all(action='SELECT')
+bpy.ops.object.delete()
+length = r1 - r0
+
+def return_y(hyp, phi, r):
+    y = (r * math.sin(phi)) + (hyp * math.sin(phi))
+    return y
+try:
+    lower = [r0 * math.cos(phi0), r0 * math.sin(phi0), 0], [r0 * math.cos(phi1), r0 * math.sin(phi1), 0], [r1 * math.cos(phi0), r1 * math.sin(phi0), 0], [r1 * math.cos(phi1), r1 * math.sin(phi1), 0] # 0, 1, 2, 3
+    upper = [r0 * math.cos(phi0), r0 * math.sin(phi0), h], [r0 * math.cos(phi1), r0 * math.sin(phi1), h], [r1 * math.cos(phi0), r1 * math.sin(phi0), h], [r1 * math.cos(phi1), r1 * math.sin(phi1), h] # 4, 5, 6, 7
+    bottom_right = [r0 * math.cos(phi0), r0 * math.sin(phi0), h/2 - gapy/2], [r0 * math.cos(phi0), r0 * math.sin(phi0), h/2 + gapy/2]  # 8, 9 from bottom up
+    distancex = r1 * math.cos(phi0) - r0 * math.cos(phi0)
+    distancey = r1 * math.sin(phi0) - r0 * math.sin(phi0)
+    x_1 = distancex/2 + r0 * math.cos(phi0) - gapx/2
+    x_2 = distancex/2 + r0 * math.cos(phi0) + gapx/2
+    front_panel_left = [x_1, return_y(x_1 - r0*math.cos(phi0), phi0, r0), h], [x_1, return_y(x_1 - r0*math.cos(phi0), phi0, r0), 0] # 10, 11
+    front_panel_right = [x_2, return_y(x_2 - r0*math.cos(phi0), phi0, r0), h], [x_2, return_y(x_2 - r0*math.cos(phi0), phi0, r0), 0] # 12, 13
+    top_right = [r1 * math.cos(phi0), r1 * math.sin(phi0), h/2 - gapy/2], [r1 * math.cos(phi0), r1 * math.sin(phi0), h/2 + gapy/2] # 14, 15
+    
+    #phi1
+    factor = 0
+    bottom_left = [r0 * math.cos(phi1), r0 * math.sin(phi1), h/2 - gapy/2], [r0 * math.cos(phi1), r0 * math.sin(phi1), h/2 + gapy/2], # 16, 17
+    distancex = r1 * math.cos(phi1) - r0 * math.cos(phi1)
+    distancey = r1 * math.sin(phi1) - r0 * math.sin(phi1)
+    
+    back_panel_left = [distancex/2 + r0 * math.cos(phi1) - gapx/2, factor, h], [distancex/2 + r0 * math.cos(phi1) - gapx/2, factor, 0] # 18, 19
+    factor = (distancex/2 + r0 * math.cos(phi1) + gapx/2) * math.sin(phi1)
+    back_panel_right = [distancex/2 + r0 * math.cos(phi1) + gapx/2, factor, h], [distancex/2 + r0 * math.cos(phi1) + gapx/2, factor, 0] # 20, 21
+    
+    #vertices = [[r0 * math.cos(phi0), r0 * math.sin(phi0), 0], [r0 * math.cos(phi1), r0 * math.sin(phi1), 0], [r1 * math.cos(phi0), r1 * math.sin(phi0), 0], [r1 * math.cos(phi1), r1 * math.sin(phi1), 0], [r0 * math.cos(phi0), r0 * math.sin(phi0), 2], [r0 * math.cos(phi1), r0 * math.sin(phi1), 2], [r1 * math.cos(phi0), r1 * math.sin(phi0), 2], [r1 * math.cos(phi1), r1 * math.sin(phi1), 2], [r0 * math.cos(phi0), r0 * math.sin(phi0), h/2 - gapy/2], [r0 * math.cos(phi0), r0 * math.sin(phi0), h/2 + gapy/2], [distance * math.cos(phi0), distance * math.sin(phi0), h], [distance * math.cos(phi0), distance * math.sin(phi0), h], [distance * math.cos(phi0) + gapx, distance * math.sin(phi0), h], [distance * math.cos(phi0), distance * math.sin(phi0), h]]
+    vertices = []
+    vertices = lower + upper + bottom_right + front_panel_left + front_panel_right + top_right + bottom_left + back_panel_left + back_panel_right
+    edges = []
+    faces = [[0, 1, 3, 2], [0, 1, 5, 4], [2, 3, 7, 6], [4, 5, 7, 6], [0, 4, 10, 11], [12, 13, 2, 6], [3, 7, 20, 21], [18, 19, 1, 5]]
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+#    bpy.ops.object.mode_set(mode='EDIT')
+#    bpy.ops.mesh.select_all(action='SELECT')
+#    bpy.ops.mesh.fill()
+#    bpy.ops.object.mode_set(mode='OBJECT')
+#    bpy.ops.object.select_all(action='SELECT')
+    
+#    context = bpy.context
+
+#    #Small Cube
+#    bpy.ops.mesh.primitive_cube_add(1, location=(0, -1.5, 0))
+#    small_cube = context.object
+
+#    #Large Cube
+#    bpy.ops.mesh.primitive_cube_add(2, location=(0, 0, 0))
+#    large_cube = context.object
+#    context.view_layer.objects.active = large_cube
+#    large_cube.select_set(True)
+
+#    mod = large_cube.modifiers.new("Boolean", type='BOOLEAN')
+#    mod.operation = 'DIFFERENCE'
+#    mod.object = small_cube
+
+#    # large cube has context.
+#    bpy.ops.object.modifier_apply("EXEC_AREA", modifier=mod.name)
+
+#    bpy.data.objects.remove(small_cube)
+
+    
+except Exception as e:
+    print(e)

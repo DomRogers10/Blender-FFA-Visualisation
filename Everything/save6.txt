@@ -1,0 +1,210 @@
+import bpy
+import math
+
+r0 = 2
+r1 = 2
+r2 = 5
+r3 = 2
+r = 18
+phi0 = 30
+phi1 = 60
+phi2 = 90
+phi0 = math.radians(phi0)
+phi1 = math.radians(phi1)
+phi2 = math.radians(phi2)
+h = 4
+gapx = 3
+gapy = 0.5
+radius = r0 + r1 + ((r2) / 2)
+speed = 4
+
+def print(data):
+    for window in bpy.context.window_manager.windows:
+        screen = window.screen
+        for area in screen.areas:
+            if area.type == 'CONSOLE': 
+                override = {'window': window, 'screen': screen, 'area': area}
+                bpy.ops.console.scrollback_append(override, text=str(data), type="OUTPUT")
+
+
+def camera():
+    camera_data = bpy.data.cameras.new(name='Camera')
+    camera_object = bpy.data.objects.new('Camera', camera_data)
+    bpy.context.scene.collection.objects.link(camera_object)
+    
+def x(r, phi):
+    return r * math.cos(phi)
+def y(r, phi):
+    return r * math.sin(phi)
+
+
+def curve_end_faces(r0, phi0, phi1):
+    vertices =  []
+    faces = []
+    edges = []
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+    
+    
+    vertices = []
+    for i in range(0, 20):
+        angle = (phi1 - phi0) * i / 19
+        vertices.append([x(r0, phi0 + angle), y(r0, phi0 + angle), 0])
+        
+    for i in range(0, 20):
+        angle = (phi1 - phi0) * i / 19
+        vertices.append([x(r0, phi0 + angle), y(r0, phi0 + angle), h])
+    faces = []
+    
+    for i in range(19):
+        faces.append([i, i+1, i+21, i+20])
+    edges = []
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+    
+    
+def curve_sides(r0, r1, phi0, c, h, offset, r00, phi1):
+    vertices =  []
+    faces = []
+    edges = []
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+    
+    
+    vertices = []
+    for i in range(20):
+        current = r0 + ((r1 - r0) * i / 19)
+        phi = phi0 - math.tan(math.radians(c)) * math.log(current/r00)
+        x = current * math.cos(phi)
+        y = current * math.sin(phi)
+        vertices.append([x, y, offset])
+        
+    
+    for i in range(20):
+        current = r0 + ((r1 - r0) * i / 19)
+        phi = phi0 - math.tan(math.radians(c)) * math.log(current/r00)
+        x = current * math.cos(phi)
+        y = current* math.sin(phi)
+        vertices.append([x, y, h+offset])
+        
+    faces = []
+    
+    for i in range(19):
+        faces.append([i, i+1, i+21, i+20])
+    edges = []
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+    return vertices
+
+
+def curves(c, r0, r1, r00, h, offset, phi0, phi1):
+    a = curve_sides(r0, r0+r1, phi0, c, h, offset, r00, phi1)
+    b = curve_sides(r0, r0+r1, phi1, c, h, offset, r00, phi1)
+    vertices = a + b
+    edges = []
+    faces = []
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+    
+    faces = []
+    
+    for i in range(19):
+        faces.append([i, i+1, i+41, i+40])
+    
+    for i in range(20, 39):
+        faces.append([i, i+1, i+41, i+40])
+    
+    faces.append([19, 39, 79, 59])
+    edges = []
+    mesh = bpy.data.meshes.new('new_mesh')
+
+    mesh.from_pydata(vertices, edges, faces)
+    mesh.update()
+
+    object = bpy.data.objects.new("Object", mesh)
+
+    collection = bpy.data.collections.new("Collection")
+    bpy.context.scene.collection.children.link(collection)
+
+    collection.objects.link(object)
+    
+def make_wedge(r0, r1, h, phi0, phi1):
+    curve_end_faces(r0, phi0, phi1)
+    curves(10, r0, r1, r0, h, 0, phi0, phi1)
+    curves(10, r0+r1, r2, r0, h/3, 0, phi0, phi1)
+    curves(10, r0+r1, r2, r0, h/3, 2*h/3, phi0, phi1)
+    curves(10, r0+r1+r2, r3, r0, h, 0, phi0, phi1) 
+    
+
+try:
+    bpy.ops.object.select_all(action='SELECT')
+    bpy.ops.object.delete()
+        
+
+
+    bpy.ops.mesh.primitive_uv_sphere_add()
+    sphere = bpy.context.active_object 
+    sphere.scale[0] = 0.5
+    sphere.scale[1] = 0.5
+    sphere.scale[2] = 0.5
+    sphere.location.z = h/2
+    sphere.location.x = radius
+    sphere.location.y = 0
+
+
+    sphere.keyframe_insert("location", frame=0)
+    for i in range(0,  361 , 5):
+        sphere.keyframe_insert("location", frame=i)
+        sphere.location.x = radius * math.cos(math.radians(i * speed))
+        sphere.location.y = radius * math.sin(math.radians(i * speed))
+    
+    for i in range(0, 12, 4):
+        make_wedge(r0, r1, h, phi0 + i * (phi1 - phi0), phi1 + (i+1) * (phi1 - phi0))
+except Exception as e:
+    print(e)
+      
